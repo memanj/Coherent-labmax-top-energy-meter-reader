@@ -1,0 +1,21 @@
+Usage:
+
+from handlers.EnergyMeterHandler import EnergyMeterHandler
+
+# Create instance
+self.energy_meter_handler = EnergyMeterHandler(port=str(STATION_PARAMS_DICT['energy_meter_comport?']))
+
+# Set timeout
+self.energy_meter_handler.set_timeout(0.5)
+
+# Set retry limit, if there is an error in energy meter measurement. Handler retries with a counter to check if there was any read out issue from the buffer.
+self.energy_meter_handler.set_retry_limit(1)
+
+# Set Range of the energy meter. It can be '3nJ', '30nJ', '300nJ'
+self.energy_meter_handler.set_range('30nJ')
+
+# Get current energy measured by the head
+self.energy_meter_range = self.energy_meter_handler.get_range()
+
+# Teardown the instance
+self.energy_meter_handler.close()
