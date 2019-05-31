@@ -1,5 +1,25 @@
 import serial
 import time
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+
+# Enabling logging mechanism
+log_dir = os.path.join(os.getcwd(), os.pardir, 'mfgtool_logs')
+if not os.path.isdir(log_dir):
+    try:
+        os.mkdir(log_dir)
+    except OSError as e:
+        print 'Error occured when creating logs folder, Error = {}'.format(e)
+handlers_log_file = os.path.join(log_dir, 'Handlers.log')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+handler = RotatingFileHandler(handlers_log_file, maxBytes=25000000, backupCount=5)
+handler.setLevel(logging.ERROR)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # time to wait after sending a command. This number has been arrived at by
 # trial and error
@@ -108,31 +128,33 @@ class EnergyMeterHandler(object):
         :param recursion: recursion is the number of retrys to make sure its a valid value
         :return:
         """
-
-        self.sendcmd('CONF:READ:CONT:LAST\n')
-        self.sendcmd('INIT\n')
-        self.sendcmd('FETC:NEXT?\n')
         self._port.flush()
+        time.sleep(0.1)
+        self.sendcmd('CONF:READ:CONT LAST\n')
+        time.sleep(0.1)
+        self.sendcmd('INIT\n')
+        time.sleep(0.1)
+        self.sendcmd('FETC:NEXT?\n')
+        time.sleep(0.1)
+
         try:
             energy = self._readline(11)
         except:
-            print 'In readline exception'
+            logger.debug('In readline exception')
             energy = 0
 
         try:
             energy = float(str(energy).strip())
             energy_nj = float(energy / 1e-09)
         except:
-            # print energy
-            # energy_nj = self.get_energy_nj()
             recursion += 1
             if recursion < self.retry_limit:
                 energy_nj = self.get_energy_nj(recursion)
             else:
                 energy_nj = 0
-            print 'In float conversion exception'
+            logger.debug('In float conversion exception')
         else:
-            self.sendcmd('ABOR?\n')
+            self.sendcmd('ABOR\n')
         return energy_nj
 
     def _readline(self, read_bytes=None):
@@ -171,7 +193,7 @@ class EnergyMeterHandler(object):
         try:
             self.sendcmd(str(set_command) + ' ' + str(value) + '\n')
         except Exception as e:
-            print('Error occured while writing to serial port Error = {0}'.format(e))
+            logger.error('Error occured while writing to serial port Error = {0}'.format(e))
 
     def get_value_energy_meter(self, get_command, bytes_to_read=0):
         """
@@ -189,12 +211,12 @@ class EnergyMeterHandler(object):
         try:
             self.sendcmd(get_command + '\n')
         except Exception as e:
-            print('Error occured while writing to serial port Error = {0}'.format(e))
+            logger.error('Error occured while writing to serial port Error = {0}'.format(e))
 
         try:
             read_value = self._readline(bytes_to_read)
         except Exception as e:
-            print('Error occured while reading from serial port Error = {0}'.format(e))
+            logger.error('Error occured while reading from serial port Error = {0}'.format(e))
 
         return read_value
 
@@ -217,7 +239,7 @@ class EnergyMeterHandler(object):
         :return: Current Energy Meter range
         """
         em_range = self.get_value_energy_meter('CONFigure:RANGe:SELect?', RANGE_DICT['read_bytes'])
-        print 'range = ' + str(em_range)
+        logger.debug('range = ' + str(em_range))
         if em_range == '0.000+e00' or not em_range:
             return 0
         else:
