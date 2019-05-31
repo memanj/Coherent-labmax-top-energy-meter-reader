@@ -11,6 +11,7 @@ Get LabMax LabVIEW Drivers
 Get LabMax LabVIEW-PC V1.7.1
 
 *Setup*
+
 Recommended to us RS232 serial connection over USB
 
 Power meter communications
